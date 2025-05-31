@@ -1,0 +1,125 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  :root {
+    /* Light Mode - Lavender & Blue Theme */
+    --background: 240 100% 97%; /* Very light, almost white-blue, for the gradient to blend into */
+    --foreground: 250 60% 18%; /* Dark indigo/purple for text */
+    
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 250 60% 18%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 60% 18%;
+    
+    --primary: 255 70% 60%; /* Vibrant Lavender (HSL: Purple is ~270, Blue ~240) */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    
+    --secondary: 240 60% 92%; /* Light cool blue */
+    --secondary-foreground: 240 50% 30%; /* Darker muted blue text on secondary */
+    
+    --muted: 240 60% 96%; /* Very light cool blue/grey */
+    --muted-foreground: 240 20% 55%; /* Greyer blue text on muted */
+    
+    --accent: 220 85% 65%; /* Bright Sky Blue */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
+    
+    --destructive: 0 75% 55%; /* Red */
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 30% 88%; /* Light blue-grey border */
+    --input: 240 30% 90%; /* Light blue-grey input background */
+    --ring: 255 70% 60%; /* Primary color for focus rings */
+
+    --chart-1: 255 70% 70%; /* Lighter Lavender */
+    --chart-2: 220 80% 75%; /* Lighter Sky Blue */
+    --chart-3: 260 60% 65%; /* Muted Purple */
+    --chart-4: 230 75% 70%; /* Medium Blue */
+    --chart-5: 250 65% 75%; /* Soft Lavender */
+    
+    --radius: 0.5rem;
+
+    /* Sidebar variables - Light Mode */
+    --sidebar-background: 240 70% 98%; /* Very light blue, slightly different from main bg */
+    --sidebar-foreground: 250 60% 25%; /* Dark indigo text */
+    --sidebar-primary: 255 70% 60%; /* Lavender */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 220 85% 65%; /* Bright Sky Blue */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 240 30% 90%; /* Light blue-grey border */
+    --sidebar-ring: 255 70% 60%; /* Lavender */
+  }
+
+  .dark {
+    /* Dark Mode - Lavender & Blue Theme */
+    --background: 250 30% 12%; /* Very dark indigo/blue base for gradient */
+    --foreground: 240 50% 90%; /* Light cool grey/blue text */
+    
+    --card: 250 25% 18%; /* Darker indigo card */
+    --card-foreground: 240 50% 90%;
+    
+    --popover: 250 25% 18%;
+    --popover-foreground: 240 50% 90%;
+    
+    --primary: 255 70% 68%; /* Lavender, slightly brighter/desaturated for dark mode contrast */
+    --primary-foreground: 255 30% 10%; /* Very dark text on primary */
+    
+    --secondary: 240 20% 22%; /* Dark muted blue */
+    --secondary-foreground: 240 50% 85%; /* Lighter muted blue text on secondary */
+    
+    --muted: 240 15% 28%; /* Darker grey-blue */
+    --muted-foreground: 240 20% 60%; /* Greyer blue text on muted */
+    
+    --accent: 220 85% 70%; /* Bright Sky Blue, good on dark */
+    --accent-foreground: 220 30% 10%; /* Very dark text on accent */
+    
+    --destructive: 0 65% 55%; /* Red for destructive actions */
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 15% 30%; /* Dark blue-grey border */
+    --input: 240 15% 25%; /* Dark blue-grey input background */
+    --ring: 255 70% 68%; /* Primary color for rings */
+
+    --chart-1: 255 60% 60%; /* Lavender */
+    --chart-2: 220 70% 60%; /* Sky Blue */
+    --chart-3: 260 50% 55%; /* Muted Purple */
+    --chart-4: 230 65% 60%; /* Medium Blue */
+    --chart-5: 250 55% 65%; /* Soft Lavender */
+
+    /* Sidebar variables - Dark Mode */
+    --sidebar-background: 250 20% 15%; /* Dark indigo base */
+    --sidebar-foreground: 240 50% 88%; /* Light cool text */
+    --sidebar-primary: 255 70% 68%; /* Lavender */
+    --sidebar-primary-foreground: 255 30% 10%; /* Very dark text */
+    --sidebar-accent: 220 85% 70%; /* Bright Sky Blue */
+    --sidebar-accent-foreground: 220 30% 10%; /* Very dark text */
+    --sidebar-border: 240 15% 25%; /* Darker border */
+    --sidebar-ring: 255 70% 68%; /* Lavender */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground; /* Apply base text color */
+    /* Subtle gradient blending primary and accent into the background */
+    background-image: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.05), hsl(var(--background)) 60%);
+    background-color: hsl(var(--background)); /* Fallback solid background */
+    font-feature-settings: "rlig" 1, "calt" 1; /* Enable common ligatures and contextual alternates */
+  }
+
+  .dark body {
+    /* Dark mode gradient */
+    background-image: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.05), hsl(var(--background)) 60%);
+    background-color: hsl(var(--background)); /* Dark theme background fallback */
+  }
+}
