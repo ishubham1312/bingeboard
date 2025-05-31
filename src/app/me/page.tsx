@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, type MouseEvent } from 'react';
@@ -228,9 +227,14 @@ export default function MyListsPage() {
     const toastControls = showToast({
       title: `List "${listToDelete.name}" deleted.`,
       description: `You can undo this action for ${countdown} seconds.`,
-      duration: 10000, 
+      duration: 10000,
       action: (
-        <Button variant="link" size="sm" onClick={() => handleUndoDelete(listToDelete)} className="text-accent-foreground hover:text-accent-foreground/80">
+        <Button
+          variant="link"
+          size="sm"
+          onClick={() => handleUndoDelete(listToDelete)}
+          className="text-accent-foreground hover:text-accent-foreground/80"
+        >
           Undo
         </Button>
       ),
@@ -593,4 +597,3 @@ export default function MyListsPage() {
   );
 }
 
-    

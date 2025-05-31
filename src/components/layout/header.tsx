@@ -104,23 +104,31 @@ export function Header() {
     }
   };
 
-  const searchBarComponent = (
+  const searchBarForm = (
     <form
       onSubmit={handleSearchSubmit}
-      className="flex flex-grow items-center space-x-1 sm:space-x-2"
+      className="flex flex-grow items-center gap-2 relative" 
     >
-      <Input
-        ref={searchInputRef}
-        type="search"
-        placeholder="Search movies, shows..."
-        className="h-9 flex-grow bg-background/80 focus:ring-accent" 
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        autoFocus={isSearchVisible && window.innerWidth < 768} 
-      />
-      <Button type="submit" variant="ghost" size="icon" aria-label="Submit search" className="h-9 w-9">
-        <SearchIcon className="h-5 w-5" />
-      </Button>
+      <div className="relative flex-grow">
+        <Input
+          ref={searchInputRef}
+          type="search"
+          placeholder="Search movies, shows..."
+          className="h-9 w-full bg-background/80 focus:ring-accent pr-9"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          autoFocus={isSearchVisible && window.innerWidth < 768}
+        />
+        <Button 
+          type="submit" 
+          variant="ghost" 
+          size="icon" 
+          aria-label="Submit search" 
+          className="absolute right-0 top-0 h-9 w-9 hover:bg-transparent"
+        >
+          <SearchIcon className="h-4 w-4" />
+        </Button>
+      </div>
       <Button
         type="button"
         variant="ghost"
@@ -130,7 +138,7 @@ export function Header() {
           setIsSearchVisible(false);
           setSearchQuery('');
         }}
-        className="h-9 w-9 md:hidden"
+        className="h-9 w-9 flex-shrink-0"
       >
         <X className="h-5 w-5" />
       </Button>
@@ -168,21 +176,9 @@ export function Header() {
                 <SearchIcon className="h-5 w-5" />
               </Button>
             ) : (
-              <div className="flex-grow max-w-xs sm:max-w-sm md:max-w-md ml-auto relative">
-                {searchBarComponent}
-                 <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Close search"
-                    onClick={() => {
-                      setIsSearchVisible(false);
-                      setSearchQuery('');
-                    }}
-                    className="h-9 w-9 absolute right-0 top-0 hidden md:flex" 
-                  >
-                  <X className="h-5 w-5" />
-                </Button>
+              <div className="flex-grow max-w-xs sm:max-w-sm md:max-w-md ml-auto"> {/* Removed relative */}
+                {searchBarForm}
+                {/* The external absolute desktop close button is removed from here */}
               </div>
             )}
              {!isSearchVisible && renderAuthSection()}
@@ -196,19 +192,19 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Open search"
+              aria-label="Toggle search" // Changed label for clarity on mobile
               onClick={() => setIsSearchVisible(prev => !prev)} 
               className="h-9 w-9"
             >
-              <SearchIcon className="h-5 w-5" />
+               {isSearchVisible ? <X className="h-5 w-5" /> : <SearchIcon className="h-5 w-5" />}
             </Button>
-            {renderAuthSection()}
+            {!isSearchVisible && renderAuthSection()}
           </div>
         </div>
         
         {isSearchVisible && window.innerWidth < 768 && (
           <div className="md:hidden absolute top-16 left-0 right-0 bg-background p-3 shadow-md border-b z-40">
-            {searchBarComponent}
+            {searchBarForm}
           </div>
         )}
       </header>

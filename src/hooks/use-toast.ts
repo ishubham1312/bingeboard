@@ -1,4 +1,3 @@
-
 "use client"
 
 // Inspired by react-hot-toast library
@@ -197,5 +196,7 @@ function useToast() {
   }
 }
 
+// Exporting the ToastActionElement type to resolve the compile error.
+export type { ToastActionElement };
+
 export { useToast, toast }
-    

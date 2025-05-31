@@ -1,13 +1,15 @@
-
 "use client";
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createList, type UserList } from '@/services/watchedItemsService';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { LogIn } from 'lucide-react';
 
 interface CreateListDialogProps {
   isOpen: boolean;
@@ -20,12 +22,26 @@ export function CreateListDialog({ isOpen, onClose, onListCreated }: CreateListD
   const [listName, setListName] = useState('');
   const [error, setError] = useState('');
   const { toast } = useToast();
+  const router = useRouter();
+  const { user } = useAuth();
 
   const handleCreate = () => {
+    if (!user) {
+      onClose();
+      router.push('/login');
+      toast({ 
+        title: "Login Required", 
+        description: "You need to be logged in to create lists.", 
+        variant: "default"
+      });
+      return;
+    }
+
     if (!listName.trim()) {
       setError('List name cannot be empty.');
       return;
     }
+    
     setError('');
     try {
       // createList now returns the array of all lists, with the new one first.
@@ -47,6 +63,31 @@ export function CreateListDialog({ isOpen, onClose, onListCreated }: CreateListD
   };
 
   if (!isOpen) return null;
+
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to create and manage lists.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-4">
+            <Button onClick={() => {
+              onClose();
+              router.push('/login');
+            }}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Go to Login
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {

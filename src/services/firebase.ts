@@ -2,14 +2,15 @@
 'use client';
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  createUserWithEmailAndPassword, 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
   type User
 } from 'firebase/auth';
 
@@ -117,7 +118,25 @@ export {
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    return { user: result.user, error: null };
+    // Ensure we have the user's Google profile data
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const user = result.user;
+    
+    // Make sure we update the user profile with Google data if needed
+    if (user && (!user.photoURL || !user.displayName) && auth.currentUser) {
+      const updates: { photoURL?: string; displayName?: string } = {};
+      if (!user.photoURL && result.user.photoURL) {
+        updates.photoURL = result.user.photoURL;
+      }
+      if (!user.displayName && result.user.displayName) {
+        updates.displayName = result.user.displayName;
+      }
+      if (Object.keys(updates).length > 0) {
+        await updateProfile(auth.currentUser, updates);
+      }
+    }
+    
+    return { user: user, error: null };
   } catch (error: any) {
     console.error("Google Sign-In error raw: ", error);
     let errorMessage = "Google Sign-In failed. Please try again.";
