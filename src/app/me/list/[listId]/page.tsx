@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { AlertTriangle, ArrowLeft, ListX, Film, Tv, Brush, Clapperboard, Search, CalendarDays, Filter as FilterIcon, XCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useListManagement } from '@/hooks/useListManagement';
-import { format, parseISO, isValid, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, endOfDay, parse } from 'date-fns';
 
 const ALL_GENRES_FILTER_VALUE = "_all_genres_in_list_";
 const ALL_RATINGS_FILTER_VALUE = "_all_ratings_in_list_";
@@ -84,23 +84,16 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  
   const { lists: allListsGlobal, refreshLists } = useListManagement();
-  
-  const toggleSection = (sectionId: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
-  };
 
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>(ALL_GENRES_FILTER_VALUE);
   const [selectedRating, setSelectedRating] = useState<string>(ALL_RATINGS_FILTER_VALUE);
+  const [selectedMediaType, setSelectedMediaType] = useState<string>('all');
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({ from: undefined, to: undefined });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -243,18 +236,107 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
   }, [listDetails, searchTerm, selectedGenre, selectedRating, dateRange]);
 
 
-  const categorySections: CategorySection[] = [
-    { id: 'series', title: "Series", items: filteredAndCategorizedItems.series, icon: <Tv className="mr-2 h-5 w-5 text-primary/90" /> },
-    { id: 'animation-movies', title: "Animation Movies", items: filteredAndCategorizedItems.animationMovies, icon: <Brush className="mr-2 h-5 w-5 text-primary/90" /> },
-    { id: 'hollywood-movies', title: "Hollywood Movies", items: filteredAndCategorizedItems.hollywoodMovies, icon: <Film className="mr-2 h-5 w-5 text-primary/90" /> },
-    { id: 'bollywood-movies', title: "Bollywood Movies", items: filteredAndCategorizedItems.bollywoodMovies, icon: <Clapperboard className="mr-2 h-5 w-5 text-primary/90" /> },
-    { id: 'other-movies', title: "Other Movies", items: filteredAndCategorizedItems.otherMovies, icon: <Film className="mr-2 h-5 w-5 text-primary/90" /> },
+  // Media type options for filter
+  const mediaTypeOptions = [
+    { value: 'all', label: 'All Types' },
+    { value: 'hollywood', label: 'Hollywood' },
+    { value: 'bollywood', label: 'Bollywood' },
+    { value: 'anime', label: 'Anime' },
+    { value: 'series', label: 'Web Series' },
+    { value: 'animation', label: 'Animation' },
   ];
+
+  // Categorize items by type and month
+  const categorizedItems = useMemo(() => {
+    // Filter by selected media type
+    const filteredItems = {
+      series: selectedMediaType === 'all' || selectedMediaType === 'series' ? 
+        filteredAndCategorizedItems.series : [],
+      animationMovies: selectedMediaType === 'all' || selectedMediaType === 'anime' || selectedMediaType === 'animation' ? 
+        filteredAndCategorizedItems.animationMovies : [],
+      hollywoodMovies: selectedMediaType === 'all' || selectedMediaType === 'hollywood' ? 
+        filteredAndCategorizedItems.hollywoodMovies : [],
+      bollywoodMovies: selectedMediaType === 'all' || selectedMediaType === 'bollywood' ? 
+        filteredAndCategorizedItems.bollywoodMovies : [],
+      otherMovies: selectedMediaType === 'all' ? 
+        filteredAndCategorizedItems.otherMovies : []
+    };
+
+    const categories = {
+      'Web Series': {
+        items: [...filteredItems.series],
+        icon: <Tv className="mr-2 h-5 w-5 text-primary/90" />
+      },
+      'Anime': {
+        items: selectedMediaType === 'anime' || selectedMediaType === 'all' || selectedMediaType === 'animation' ? 
+          [...filteredItems.animationMovies] : [],
+        icon: <Brush className="mr-2 h-5 w-5 text-primary/90" />
+      },
+      'Hollywood': {
+        items: [...filteredItems.hollywoodMovies],
+        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />
+      },
+      'Bollywood': {
+        items: [...filteredItems.bollywoodMovies],
+        icon: <Clapperboard className="mr-2 h-5 w-5 text-primary/90" />
+      },
+      'Other Movies': {
+        items: [...filteredItems.otherMovies],
+        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />
+      }
+    };
+    
+    // Remove empty categories
+    Object.keys(categories).forEach(key => {
+      if (categories[key as keyof typeof categories].items.length === 0) {
+        delete categories[key as keyof typeof categories];
+      }
+    });
+
+    // Process each category to group items by month
+    Object.entries(categories).forEach(([category, data]) => {
+      const monthsMap = new Map();
+      
+      data.items.forEach(item => {
+        const date = item.addedAt ? new Date(item.addedAt) : new Date(0);
+        const monthYear = format(date, 'MMMM yyyy');
+        
+        if (!monthsMap.has(monthYear)) {
+          monthsMap.set(monthYear, []);
+        }
+        monthsMap.get(monthYear).push(item);
+      });
+
+      // Convert to array and sort by date (newest first)
+      data.months = Array.from(monthsMap.entries())
+        .map(([month, items]) => ({
+          month,
+          items: [...items].sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
+        }))
+        .sort((a, b) => {
+          // Sort months chronologically (newest first)
+          const dateA = parse(a.month, 'MMMM yyyy', new Date());
+          const dateB = parse(b.month, 'MMMM yyyy', new Date());
+          return dateB.getTime() - dateA.getTime();
+        });
+    });
+
+    return categories;
+  }, [filteredAndCategorizedItems]);
   
   const clearDateRange = () => {
     setDateRange({ from: undefined, to: undefined });
     setShowDatePicker(false);
   };
+
+  // Check if any filter is active
+  const isAnyFilterActive = 
+    searchTerm !== '' || 
+    selectedGenre !== ALL_GENRES_FILTER_VALUE || 
+    selectedRating !== ALL_RATINGS_FILTER_VALUE || 
+    selectedMediaType !== 'all' ||
+    dateRange.from || 
+    dateRange.to;
 
   if (!isMounted || authLoading || isLoading) {
     return <ListPageSkeleton listName={listDetails?.name || "List Details"} />;
@@ -307,137 +389,176 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
         </h1>
         <p className="text-muted-foreground">
           {originalTotalItemsInList} {originalTotalItemsInList === 1 ? 'item' : 'items'} originally
-          { (searchTerm || selectedGenre !== ALL_GENRES_FILTER_VALUE || selectedRating !== ALL_RATINGS_FILTER_VALUE || dateRange.from || dateRange.to) && 
+          { (searchTerm || selectedGenre !== ALL_GENRES_FILTER_VALUE || selectedRating !== ALL_RATINGS_FILTER_VALUE || selectedMediaType !== 'all' || dateRange.from || dateRange.to) && 
             ` (showing ${filteredAndCategorizedItems.totalFilteredItems} after filters)` 
  }
         </p>
       </div>
 
-      {/* Filter Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-4 border rounded-lg bg-card shadow">
-        <div>
-          <Label htmlFor="search-in-list" className="text-sm font-medium">Search in this list</Label>
-          <div className="relative mt-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search-in-list"
-              type="search"
-              placeholder="Search by title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="genre-filter-list-page" className="text-sm font-medium">Filter by Genre</Label>
-          <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-            <SelectTrigger id="genre-filter-list-page" className="w-full mt-1">
-              <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Select a genre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_GENRES_FILTER_VALUE}>All Genres in List</SelectItem>
-              {availableGenres.map(genre => (
-                <SelectItem key={genre.id} value={genre.id}>{genre.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="rating-filter-list-page" className="text-sm font-medium">Filter by Rating</Label>
-          <Select value={selectedRating} onValueChange={setSelectedRating}>
-            <SelectTrigger id="rating-filter-list-page" className="w-full mt-1">
-              <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Select a rating" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_RATINGS_FILTER_VALUE}>All Ratings in List</SelectItem>
-              {availableRatings.map(rating => (
-                <SelectItem key={rating.id} value={rating.id}>
-                  {rating.name} {rating.name === "1.0" ? "Star" : "Stars"} & Up
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="date-range-filter" className="text-sm font-medium">Filter by Date Added</Label>
-          <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
-            <PopoverTrigger asChild>
-              <Button id="date-range-filter" variant="outline" className="w-full justify-start text-left font-normal mt-1 relative">
-                <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
-                {dateRange.from ? (
-                  dateRange.to ? (
-                    <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                  ) : (
-                    format(dateRange.from, "LLL dd, y")
-                  )
-                ) : (
-                  <span>Pick a date range</span>
-                )}
-                 { (dateRange.from || dateRange.to) && (
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); clearDateRange(); }} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 mt-0 opacity-70 hover:opacity-100">
-                        <XCircle className="h-4 w-4 text-muted-foreground"/>
-                        <span className="sr-only">Clear date range</span>
-                    </Button>
-                 )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange.from}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
+      {/* Header with Search and Filters */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <h2 className="text-2xl font-bold">My Collection</h2>
+          
+          {/* Search Bar */}
+          <div className="w-full sm:max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
               />
-               <div className="p-2 border-t flex justify-end">
-                  <Button size="sm" onClick={() => setShowDatePicker(false)}>Apply</Button>
-                </div>
-            </PopoverContent>
-          </Popover>
+            </div>
+          </div>
+          
+          {/* Filter Button */}
+          <div className="flex items-center space-x-2 w-full sm:w-auto">
+            {isAnyFilterActive && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearAllFilters}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Clear Filters
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              <FilterIcon className="h-4 w-4" />
+              <span>Filters{isAnyFilterActive ? ' •' : ''}</span>
+            </Button>
+          </div>
         </div>
       </div>
 
+      {/* Filter Controls */}
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-4 border rounded-lg bg-card shadow">
+          <div>
+            <Label htmlFor="media-type-filter" className="text-sm font-medium">Media Type</Label>
+            <Select value={selectedMediaType} onValueChange={setSelectedMediaType}>
+              <SelectTrigger id="media-type-filter" className="w-full mt-1">
+                <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Select media type" />
+              </SelectTrigger>
+              <SelectContent>
+                {mediaTypeOptions.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="genre-filter-list-page" className="text-sm font-medium">Genre</Label>
+            <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+              <SelectTrigger id="genre-filter-list-page" className="w-full mt-1">
+                <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="All Genres" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_GENRES_FILTER_VALUE}>All Genres</SelectItem>
+                {availableGenres.map(genre => (
+                  <SelectItem key={genre.id} value={genre.id}>{genre.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="rating-filter-list-page" className="text-sm font-medium">Rating</Label>
+            <Select value={selectedRating} onValueChange={setSelectedRating}>
+              <SelectTrigger id="rating-filter-list-page" className="w-full mt-1">
+                <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="All Ratings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_RATINGS_FILTER_VALUE}>All Ratings</SelectItem>
+                {availableRatings.map(rating => (
+                  <SelectItem key={rating.id} value={rating.id}>
+                    {rating.name} {rating.name === "1.0" ? "Star" : "Stars"} & Up
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="md:col-span-3">
+            <Label htmlFor="date-range-filter" className="text-sm font-medium">Date Added</Label>
+            <div className="mt-1">
+              <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                <PopoverTrigger asChild>
+                  <Button id="date-range-filter" variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <span className="whitespace-nowrap">
+                          {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, y")}
+                        </span>
+                      ) : (
+                        format(dateRange.from, "MMM d, y")
+                      )
+                    ) : (
+                      <span>Select date range</span>
+                    )}
+                    {(dateRange.from || dateRange.to) && (
+                      <XCircle 
+                        className="ml-2 h-4 w-4 text-muted-foreground opacity-70 hover:opacity-100"
+                        onClick={(e) => { e.stopPropagation(); clearDateRange(); }}
+                      />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                  <div className="p-2 border-t flex justify-end">
+                    <Button size="sm" onClick={() => setShowDatePicker(false)}>Apply</Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
+      )}
+
       {filteredAndCategorizedItems.totalFilteredItems > 0 ? (
         <div className="space-y-10">
-          {categorySections.map(section => {
-            const isExpanded = !!expandedSections[section.id];
-            const itemsToShow = isExpanded ? section.items : section.items.slice(0, ITEMS_PER_CATEGORY_PREVIEW);
-            const hasMoreItems = section.items.length > ITEMS_PER_CATEGORY_PREVIEW;
+          {Object.entries(categorizedItems).map(([category, { items, icon, months }]) => {
+            if (items.length === 0) return null;
             
             return (
-              section.items.length > 0 && (
-                <section key={section.id} className="relative">
-                  <div className="flex justify-between items-center mb-4 sm:mb-6 pb-2 border-b border-border/70">
-                    <h2 className="flex items-center text-2xl sm:text-3xl font-semibold text-primary/90">
-                      {section.icon}
-                      {section.title} 
-                      <span className="text-lg text-muted-foreground ml-2">({section.items.length})</span>
-                    </h2>
-                    {hasMoreItems && (
-                      <Button 
-                        variant="link" 
-                        className="text-primary hover:text-primary/80 px-0 text-sm sm:text-base"
-                        onClick={() => toggleSection(section.id)}
-                      >
-                        {isExpanded ? 'Show Less' : 'Show All'} 
-                        <ArrowRight className={`ml-1.5 h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="relative
-                    overflow-x-auto pb-4 -mx-4 px-4
-                    scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
-                    <div className="flex space-x-4 w-max min-w-full">
-                      {itemsToShow.map((item) => (
-                        <div key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`} 
-                             className="w-44 sm:w-52 md:w-60 flex-shrink-0">
+              <section key={category} className="relative">
+                <div className="flex items-center mb-4 sm:mb-6 pb-2 border-b border-border/70">
+                  <h2 className="flex items-center text-2xl sm:text-3xl font-semibold text-primary/90">
+                    {icon}
+                    {category}
+                    <span className="text-lg text-muted-foreground ml-2">({items.length})</span>
+                  </h2>
+                </div>
+
+                {months.map(({ month, items: monthItems }) => (
+                  <div key={month} className="mb-8">
+                    <h3 className="text-xl font-medium text-muted-foreground mb-4">{month}</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+                      {monthItems.map((item: ListItem) => (
+                        <div key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`}>
                           <ContentCard 
                             item={item} 
                             currentListId={listDetails.id} 
@@ -447,8 +568,8 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
                       ))}
                     </div>
                   </div>
-                </section>
-              )
+                ))}
+              </section>
             );
           })}
         </div>
