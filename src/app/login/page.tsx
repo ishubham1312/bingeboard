@@ -94,7 +94,7 @@ export default function LoginPage() {
       <div className="fixed inset-0 z-[-1] bg-login-bg bg-cover md:bg-200% bg-no-repeat animate-pan-bg opacity-20 pointer-events-none"></div>
       
       <main className="flex-grow container mx-auto py-12 px-4 flex justify-center items-center">
-        <Card className="w-full max-w-md bg-card/80 backdrop-blur-lg shadow-xl border-slate-100/25">
+        <Card className="w-full max-w-md bg-card/80 backdrop-blur-lg shadow-xl border-slate-100/25" style={{backgroundColor: 'rgb(72 57 159 / 8%)'}}>
           <CardHeader>
             <CardTitle className="text-2xl">{isSignUp ? "Create an Account" : "Sign In"}</CardTitle>
             <CardDescription>
