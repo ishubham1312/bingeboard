@@ -4,16 +4,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { SearchIcon, List, X, UserCircle2, Settings, LogIn, LogOut, RefreshCw, ListPlus } from 'lucide-react'; // Added ListPlus
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input'; 
+import { Button } from '@/components/ui/button'; // Added usePathname
+import { useRouter } from 'next/navigation'; // Added usePathname
 import { type FormEvent, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from '@/hooks/use-toast';
 import { CreateListDialog } from '@/components/list/CreateListDialog';
-
+import { usePathname } from 'next/navigation';
 
 // Helper for avatar initials
 const getInitials = (name?: string | null, email?: string | null): string => {
@@ -34,7 +34,7 @@ export function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const { user, loading } = useAuth(); // Removed signOutUser as it's handled in settings/profile
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(false); // This ensures the component is mounted before rendering auth details
   const { toast } = useToast();
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +52,11 @@ export function Header() {
       }, 50);
     }
   }, [isSearchVisible]);
+
+  const pathname = usePathname(); // Use usePathname hook
+  const isLoginPage = pathname === '/login'; // Check if the current path is '/login'
+
+
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -92,18 +97,21 @@ export function Header() {
               </Avatar>
             </Button>
           </Link>
-      );
-    } else {
+      );} else {
       return (
+        // Render Login button only if not on the login page
+        !isLoginPage && (
+
         <Link href="/login" passHref legacyBehavior>
           <Button variant="ghost" size="sm" className="text-sm">
             <LogIn className="mr-1.5 h-4 w-4" /> Login
           </Button>
         </Link>
+      )
       );
     }
   };
-
+  
   const searchBarForm = (
     <form
       onSubmit={handleSearchSubmit}
@@ -164,41 +172,48 @@ export function Header() {
           </Link>
 
           {/* Desktop Search - Inline */}
+
           <div className="hidden md:flex flex-1 items-center justify-end space-x-2">
-            {!isSearchVisible ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Open search"
-                onClick={() => setIsSearchVisible(true)}
-                className="h-9 w-9"
-              >
-                <SearchIcon className="h-5 w-5" />
-              </Button>
-            ) : (
-              <div className="flex-grow max-w-xs sm:max-w-sm md:max-w-md ml-auto"> {/* Removed relative */}
-                {searchBarForm}
-                {/* The external absolute desktop close button is removed from here */}
-              </div>
+            {!isLoginPage && (
+              <>
+                {!isSearchVisible ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Open search"
+                    onClick={() => setIsSearchVisible(true)}
+                    className="h-9 w-9"
+                  >
+                    <SearchIcon className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <div className="flex-grow max-w-xs sm:max-w-sm md:max-w-md ml-auto"> {/* Removed relative */}
+                    {searchBarForm}
+                    {/* The external absolute desktop close button is removed from here */}
+                  </div>
+                )}
+                {!isSearchVisible && renderAuthSection()}
+                {isSearchVisible && (
+                  <div className="ml-2">{renderAuthSection()}</div>
+                )}
+              </>
             )}
-             {!isSearchVisible && renderAuthSection()}
-             {isSearchVisible && (
-                <div className="ml-2">{renderAuthSection()}</div>
-             )}
           </div>
 
           {/* Mobile Search Icon & Auth Section */}
           <div className="flex md:hidden flex-1 items-center justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Toggle search" // Changed label for clarity on mobile
-              onClick={() => setIsSearchVisible(prev => !prev)} 
-              className="h-9 w-9"
-            >
-               {isSearchVisible ? <X className="h-5 w-5" /> : <SearchIcon className="h-5 w-5" />}
-            </Button>
-            {!isSearchVisible && renderAuthSection()}
+            {!isLoginPage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Toggle search" // Changed label for clarity on mobile
+                onClick={() => setIsSearchVisible(prev => !prev)}
+                className="h-9 w-9"
+              >
+                {isSearchVisible ? <X className="h-5 w-5" /> : <SearchIcon className="h-5 w-5" />}
+              </Button>
+            )}
+            {!isSearchVisible && !isLoginPage && renderAuthSection()}
           </div>
         </div>
         

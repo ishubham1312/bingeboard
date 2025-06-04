@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,6 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false); 
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const handleAuthSuccess = () => {
@@ -112,16 +115,27 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">{isSignUp ? "Password" : "Password"}</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder={isSignUp ? "Must be at least 6 characters" : undefined}
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder={isSignUp ? "Must be at least 6 characters" : undefined}
+                    required 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  {password && ( // Conditionally render button if password is not empty
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  )}                </div>              </div>
+              {!isSignUp && ( // Show "Forgot Password?" link only on sign-in form
+             null )}
               {error && <p className="text-sm text-destructive">{error}</p>}
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
