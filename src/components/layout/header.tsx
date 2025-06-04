@@ -78,22 +78,15 @@ export function Header() {
          <Link href="/me" passHref legacyBehavior>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0" aria-label="My Profile and Lists">
               <Avatar className="h-9 w-9 border-2 border-primary/30">
-                {user.photoURL && !user.photoURL.includes('placehold.co') ? (
-                  <AvatarImage 
-                    src={user.photoURL} 
-                    alt={user.displayName || user.email || 'User Avatar'} 
-                    data-ai-hint="user avatar"
-                  />
-                ) : user.photoURL && user.photoURL.includes('placehold.co?text=') ? (
-                  <AvatarImage 
-                    src={user.photoURL.split('?text=')[1] === 'UserCircle2Icon' ? '/icons/default-avatar.svg' : `/icons/${user.photoURL.split('?text=')[1]}.svg`}
-                    alt={user.displayName || "User Avatar"} 
-                    className="p-1"
-                    data-ai-hint="avatar icon"
-                  />
-                ) : (
-                  <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
-                )}
+                <AvatarImage 
+                  src={user.photoURL || undefined}
+                  alt={user.displayName || user.email || "User Avatar"}
+                  data-ai-hint="user avatar"
+                  className="object-cover"
+                />
+                <AvatarFallback email={user.email}>
+                  {user.displayName ? getInitials(user.displayName, user.email) : null}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </Link>

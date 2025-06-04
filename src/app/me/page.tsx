@@ -392,8 +392,15 @@ export default function MyListsPage() {
           {/* Profile Info Section */}
           <div className="flex flex-col sm:flex-row items-center sm:items-end space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
             <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-background shadow-md -mt-12 sm:-mt-16 flex-shrink-0">
-              <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="profile avatar"/>
-              <AvatarFallback className="text-4xl">{getInitials(user.displayName, user.email)}</AvatarFallback>
+              <AvatarImage 
+                src={user.photoURL || undefined} 
+                alt={user.displayName || user.email || "User Avatar"} 
+                data-ai-hint="profile avatar"
+                className="object-cover"
+              />
+              <AvatarFallback email={user.email}>
+                {user.displayName ? getInitials(user.displayName, user.email) : null}
+              </AvatarFallback>
             </Avatar>
             <div className="flex-1 text-center sm:text-left pt-4 sm:pt-0">
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground text-center sm:text-left">

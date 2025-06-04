@@ -59,22 +59,71 @@ export function ExportListDialog({ isOpen, onClose, listName, listJSON }: Export
   };
 
   const handleWebShare = async () => {
-    if (navigator.share) {
+    try {
+      // First, check if the Web Share API is available
+      if (!navigator.share) {
+        throw new Error('Web Share API not supported');
+      }
+
+      // Create a blob URL for the file
+      const blob = new Blob([listJSON], { type: 'application/json' });
+      const safeListName = listName.replace(/[^a-z0-9_]+/gi, '_').toLowerCase();
+      const fileName = `${safeListName}_bboard_export.json`;
+      const dataUrl = URL.createObjectURL(blob);
+      
+      // Try to share with a data URL first (most compatible)
       try {
         await navigator.share({
           title: `BingeBoard List: ${listName}`,
-          text: `Check out my BingeBoard list "${listName}"!\n\n${listJSON}`,
-          // files: [new File([listJSON], `${listName}_export.json`, { type: 'application/json' })], // File sharing can be complex
+          text: `Check out my BingeBoard list`,
+          url: dataUrl
         });
-        toast({ title: "Shared!", description: "List data sent to share dialog." });
-      } catch (err: any) {
-        if (err.name !== 'AbortError') { // Ignore if user cancels share
-          console.error("Failed to share list JSON:", err);
-          toast({ title: "Share Failed", description: err.message || "Could not share data.", variant: "destructive" });
+      } catch (shareError) {
+        // If sharing with URL fails, try sharing as a file if possible
+        if (navigator.canShare && navigator.canShare({ files: [] })) {
+          const file = new File([blob], fileName, { type: 'application/json' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `BingeBoard List: ${listName}`,
+              text: `Check out my BingeBoard list`,
+              files: [file]
+            });
+          } else {
+            throw new Error('File sharing not permitted');
+          }
+        } else {
+          throw shareError;
         }
       }
-    } else {
-      toast({ title: "Web Share Not Supported", description: "Your browser doesn't support the Web Share API.", variant: "default" });
+      
+      // Clean up the URL object after sharing
+      setTimeout(() => URL.revokeObjectURL(dataUrl), 1000);
+      
+      toast({ 
+        title: "Shared!", 
+        description: "List shared successfully.",
+        duration: 3000
+      });
+      
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        // User cancelled the share
+        return;
+      }
+      
+      console.warn("Sharing not available:", err.message);
+      
+      // Fall back to download
+      toast({ 
+        title: "Opening share dialog", 
+        description: "If share dialog doesn't appear, the file will download automatically.",
+        duration: 3000
+      });
+      
+      // Give the share dialog a moment to appear
+      setTimeout(() => {
+        handleDownloadJSON();
+      }, 1000);
     }
   };
 
@@ -83,55 +132,52 @@ export function ExportListDialog({ isOpen, onClose, listName, listJSON }: Export
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Export List: {listName}</DialogTitle>
-          <DialogDescription>
-            Share your list by copying the JSON, downloading it as a file, or using your device's share options.
+          <DialogDescription className="pt-2">
+            Choose how you'd like to export your list
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-2">
-          <Textarea
-            value={listJSON}
-            readOnly
-            rows={8}
-            className="w-full min-h-[120px] text-xs bg-muted/50 border-border focus-visible:ring-primary"
-            aria-label="List JSON data for export"
-          />
-        </div>
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-4 border-t">
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="py-2 space-y-3">
+          <Button
+            onClick={handleCopyToClipboard}
+            variant="outline"
+            className="w-full justify-start py-6 text-base"
+          >
+            <Copy className="mr-3 h-5 w-5" />
+            <div className="text-left">
+              <div className="font-medium">Copy to Clipboard</div>
+              <div className="text-xs text-muted-foreground">Copy the list data to your clipboard</div>
+            </div>
+          </Button>
+          
+          <Button
+            onClick={handleDownloadJSON}
+            variant="outline"
+            className="w-full justify-start py-6 text-base"
+          >
+            <Download className="mr-3 h-5 w-5" />
+            <div className="text-left">
+              <div className="font-medium">Download as File</div>
+              <div className="text-xs text-muted-foreground">Save as a JSON file to your device</div>
+            </div>
+          </Button>
+          
+          {canShare && (
             <Button
-              onClick={handleCopyToClipboard}
-              variant={isCopied ? "secondary" : "outline"}
-              className="w-full sm:flex-1"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              {isCopied ? "Copied!" : "Copy JSON"}
-            </Button>
-            <Button
-              onClick={handleDownloadJSON}
+              onClick={handleWebShare}
               variant="outline"
-              className="w-full sm:flex-1"
+              className="w-full justify-start py-6 text-base"
             >
-              <Download className="mr-2 h-4 w-4" />
-              Download File
+              <ShareIcon className="mr-3 h-5 w-5" />
+              <div className="text-left">
+                <div className="font-medium">Share List</div>
+                <div className="text-xs text-muted-foreground">Share using your device's share options</div>
+              </div>
             </Button>
-             {canShare && (
-              <Button
-                onClick={handleWebShare}
-                variant="outline"
-                className="w-full sm:flex-1"
-              >
-                <ShareIcon className="mr-2 h-4 w-4" />
-                Share List
-              </Button>
-            )}
-          </div>
-          <DialogClose asChild>
-            <Button type="button" variant="default" className="w-full sm:w-auto">Close</Button>
-          </DialogClose>
-        </DialogFooter>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

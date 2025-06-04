@@ -107,6 +107,16 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-3">
+        <Link href="/me/edit-profile" passHref legacyBehavior>
+          <Button
+            variant="outline"
+            className="w-full justify-start py-6 text-base bg-card hover:bg-muted/50"
+          >
+            <UserCircle2 className="mr-3 h-5 w-5 text-primary/80" />
+            Edit Profile
+          </Button>
+        </Link>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

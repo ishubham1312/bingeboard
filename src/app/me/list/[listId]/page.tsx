@@ -84,8 +84,16 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   
   const { lists: allListsGlobal, refreshLists } = useListManagement();
+  
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
 
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -399,37 +407,49 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
       {filteredAndCategorizedItems.totalFilteredItems > 0 ? (
         <div className="space-y-10">
           {categorySections.map(section => {
-            const itemsToShow = section.items.slice(0, ITEMS_PER_CATEGORY_PREVIEW);
+            const isExpanded = !!expandedSections[section.id];
+            const itemsToShow = isExpanded ? section.items : section.items.slice(0, ITEMS_PER_CATEGORY_PREVIEW);
+            const hasMoreItems = section.items.length > ITEMS_PER_CATEGORY_PREVIEW;
+            
             return (
               section.items.length > 0 && (
-                <section key={section.id}>
+                <section key={section.id} className="relative">
                   <div className="flex justify-between items-center mb-4 sm:mb-6 pb-2 border-b border-border/70">
                     <h2 className="flex items-center text-2xl sm:text-3xl font-semibold text-primary/90">
                       {section.icon}
                       {section.title} 
                       <span className="text-lg text-muted-foreground ml-2">({section.items.length})</span>
                     </h2>
-                    {section.items.length > ITEMS_PER_CATEGORY_PREVIEW && (
-                      <Link href={`/me/list/${listDetails.id}/category/${section.id}`} passHref legacyBehavior>
-                        <Button variant="link" className="text-primary hover:text-primary/80 px-0 text-sm sm:text-base">
-                          Show All <ArrowRight className="ml-1.5 h-4 w-4" />
-                        </Button>
-                      </Link>
+                    {hasMoreItems && (
+                      <Button 
+                        variant="link" 
+                        className="text-primary hover:text-primary/80 px-0 text-sm sm:text-base"
+                        onClick={() => toggleSection(section.id)}
+                      >
+                        {isExpanded ? 'Show Less' : 'Show All'} 
+                        <ArrowRight className={`ml-1.5 h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
-                    {itemsToShow.map((item) => (
-                      <ContentCard 
-                          key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`} 
-                          item={item} 
-                          currentListId={listDetails.id} 
-                          onItemStatusChange={handleItemUpdate} 
-                      />
-                    ))}
+                  <div className="relative
+                    overflow-x-auto pb-4 -mx-4 px-4
+                    scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+                    <div className="flex space-x-4 w-max min-w-full">
+                      {itemsToShow.map((item) => (
+                        <div key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`} 
+                             className="w-44 sm:w-52 md:w-60 flex-shrink-0">
+                          <ContentCard 
+                            item={item} 
+                            currentListId={listDetails.id} 
+                            onItemStatusChange={handleItemUpdate} 
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </section>
               )
-            )
+            );
           })}
         </div>
       ) : originalTotalItemsInList > 0 && filteredAndCategorizedItems.totalFilteredItems === 0 ? (
