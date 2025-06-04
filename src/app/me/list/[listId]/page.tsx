@@ -67,6 +67,10 @@ interface CategorySection {
   title: string;
   items: ListItem[];
   icon: JSX.Element;
+  months?: Array<{
+    month: string;
+    items: ListItem[];
+  }>;
 }
 
 interface IndividualListPageProps {
@@ -265,24 +269,29 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
     const categories = {
       'Web Series': {
         items: [...filteredItems.series],
-        icon: <Tv className="mr-2 h-5 w-5 text-primary/90" />
+        icon: <Tv className="mr-2 h-5 w-5 text-primary/90" />,
+        months: []
       },
       'Anime': {
         items: selectedMediaType === 'anime' || selectedMediaType === 'all' || selectedMediaType === 'animation' ? 
           [...filteredItems.animationMovies] : [],
-        icon: <Brush className="mr-2 h-5 w-5 text-primary/90" />
+        icon: <Brush className="mr-2 h-5 w-5 text-primary/90" />,
+        months: []
       },
       'Hollywood': {
         items: [...filteredItems.hollywoodMovies],
-        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />
+        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />,
+        months: []
       },
       'Bollywood': {
         items: [...filteredItems.bollywoodMovies],
-        icon: <Clapperboard className="mr-2 h-5 w-5 text-primary/90" />
+        icon: <Clapperboard className="mr-2 h-5 w-5 text-primary/90" />,
+        months: []
       },
       'Other Movies': {
         items: [...filteredItems.otherMovies],
-        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />
+        icon: <Film className="mr-2 h-5 w-5 text-primary/90" />,
+        months: []
       }
     };
     
@@ -322,11 +331,20 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
     });
 
     return categories;
-  }, [filteredAndCategorizedItems]);
+  }, [filteredAndCategorizedItems, selectedMediaType]);
   
-  const clearDateRange = () => {
+  const clearDateRange = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setDateRange({ from: undefined, to: undefined });
     setShowDatePicker(false);
+  };
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedGenre(ALL_GENRES_FILTER_VALUE);
+    setSelectedRating(ALL_RATINGS_FILTER_VALUE);
+    setSelectedMediaType('all');
+    setDateRange({ from: undefined, to: undefined });
   };
 
   // Check if any filter is active
@@ -443,7 +461,7 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
       {showFilters && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-4 border rounded-lg bg-card shadow">
           <div>
-            <Label htmlFor="media-type-filter" className="text-sm font-medium">Media Type</Label>
+            <Label htmlFor="media-type-filter" className="text-sm font-medium">Short by Type</Label>
             <Select value={selectedMediaType} onValueChange={setSelectedMediaType}>
               <SelectTrigger id="media-type-filter" className="w-full mt-1">
                 <FilterIcon className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -513,8 +531,8 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
                     )}
                     {(dateRange.from || dateRange.to) && (
                       <XCircle 
-                        className="ml-2 h-4 w-4 text-muted-foreground opacity-70 hover:opacity-100"
-                        onClick={(e) => { e.stopPropagation(); clearDateRange(); }}
+                        className="ml-2 h-4 w-4 text-muted-foreground opacity-70 hover:opacity-100 cursor-pointer"
+                        onClick={clearDateRange}
                       />
                     )}
                   </Button>
