@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, use } from 'react';
@@ -31,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Label } from '@/components/ui/label';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; 
+import { ImageViewerDialog } from '@/components/media/ImageViewerDialog';
 
 import { getLists, isItemInAnyList, type ListItem } from '@/services/watchedItemsService';
 import { useListManagement } from '@/hooks/useListManagement'; // Import useListManagement
@@ -634,24 +634,34 @@ export default function MediaDetailPage({ params: paramsFromProp }: MediaDetailP
             <ScrollArea className="w-full whitespace-nowrap rounded-md pb-4">
               <div className="flex space-x-4">
                 {mediaImages.backdrops.map((image, index) => (
-                  <div key={image.file_path || index} className="w-64 md:w-80 h-36 md:h-44 relative rounded-lg overflow-hidden shadow-md flex-shrink-0">
-                    <Image
-                      src={image.file_path}
-                      alt={`Backdrop ${index + 1} for ${titleToDisplay}`}
-                      fill
-                      style={{ objectFit: 'cover' }}
-                      className="rounded-lg"
-                      sizes="(max-width: 768px) 256px, 320px"
-                      data-ai-hint="movie scene image"
-                      onError={(e) => { e.currentTarget.src = `https://placehold.co/780x439.png?text=Error`; }}
-                    />
-                  </div>
+                  <ImageViewerDialog 
+                    key={image.file_path || index}
+                    src={image.file_path} 
+                    alt={`Backdrop ${index + 1} for ${titleToDisplay}`}
+                  >
+                    <div 
+                      className="group w-64 md:w-80 h-36 md:h-44 relative rounded-lg overflow-hidden shadow-md flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all duration-200 ease-in-out"
+                      role="button"
+                      aria-label={`View larger version of backdrop ${index + 1} for ${titleToDisplay}`}
+                    >
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 z-10" />
+                      <Image
+                        src={image.file_path}
+                        alt={`Backdrop ${index + 1} for ${titleToDisplay}`}
+                        fill
+                        style={{ objectFit: 'cover' }}
+                        sizes="(max-width: 768px) 256px, 320px"
+                        className="transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    </div>
+                  </ImageViewerDialog>
                 ))}
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           ) : (
-            <p className="text-muted-foreground">No images available for this gallery.</p>
+            <p className="text-muted-foreground">No gallery images available.</p>
           )}
         </div>
       )}
