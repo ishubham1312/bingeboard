@@ -15,7 +15,8 @@ import {
   type EpisodeDetail,
   type RegionWatchProviders,
   type WatchProviderDetail,
-  type MediaImage
+  type MediaImage,
+  type CreditsResponse // <-- Add this line to import CreditsResponse
 } from '@/services/tmdb';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
@@ -679,7 +680,7 @@ export default function MediaDetailPage({ params: paramsFromProp }: MediaDetailP
           <Separator className="my-6 sm:my-8" />
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-primary flex items-center"><Users className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3"/>Cast</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-            {cast.map(member => (
+            {cast.map((member: CastMember) => (
               <div key={member.id} className="text-center bg-card p-3 sm:p-4 rounded-lg shadow-md hover:shadow-primary/20 transition-shadow">
                 <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-3 border-2 border-primary/50 rounded-lg">
                   <AvatarImage
