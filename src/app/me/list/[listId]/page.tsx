@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo, type MouseEvent, use } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { getListById, type UserList, type ListItem } from '@/services/watchedItemsService';
 import { ContentCard } from '@/components/content/content-card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { AlertTriangle, ArrowLeft, ListX, Film, Tv, Brush, Clapperboard, Search, CalendarDays, Filter as FilterIcon, XCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useListManagement } from '@/hooks/useListManagement';
-import { format, parseISO, isValid, startOfDay, endOfDay, parse } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, endOfDay, parse, format as formatDate } from 'date-fns';
 
 const ALL_GENRES_FILTER_VALUE = "_all_genres_in_list_";
 const ALL_RATINGS_FILTER_VALUE = "_all_ratings_in_list_";
@@ -60,6 +60,17 @@ interface CategorizedItems {
   bollywoodMovies: ListItem[];
   otherMovies: ListItem[];
   totalFilteredItems: number;
+}
+
+interface CategorizedItemsMap {
+  [key: string]: {
+    items: ListItem[];
+    icon: JSX.Element;
+    months: Array<{
+      month: string;
+      items: ListItem[];
+    }>;
+  };
 }
 
 interface CategorySection {
@@ -251,29 +262,30 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
   ];
 
   // Categorize items by type and month
-  const categorizedItems = useMemo(() => {
+  const categorizedItems: CategorizedItemsMap = useMemo(() => {
     // Filter by selected media type
-    const filteredItems = {
-      series: selectedMediaType === 'all' || selectedMediaType === 'series' ? 
-        filteredAndCategorizedItems.series : [],
-      animationMovies: selectedMediaType === 'all' || selectedMediaType === 'anime' || selectedMediaType === 'animation' ? 
-        filteredAndCategorizedItems.animationMovies : [],
-      hollywoodMovies: selectedMediaType === 'all' || selectedMediaType === 'hollywood' ? 
-        filteredAndCategorizedItems.hollywoodMovies : [],
-      bollywoodMovies: selectedMediaType === 'all' || selectedMediaType === 'bollywood' ? 
-        filteredAndCategorizedItems.bollywoodMovies : [],
+    const filteredItems: CategorizedItems = {
+      series: (selectedMediaType === 'all' || selectedMediaType === 'series') ? 
+        [...filteredAndCategorizedItems.series] : [],
+      animationMovies: (selectedMediaType === 'all' || selectedMediaType === 'anime' || selectedMediaType === 'animation') ? 
+        [...filteredAndCategorizedItems.animationMovies] : [],
+      hollywoodMovies: (selectedMediaType === 'all' || selectedMediaType === 'hollywood') ? 
+        [...filteredAndCategorizedItems.hollywoodMovies] : [],
+      bollywoodMovies: (selectedMediaType === 'all' || selectedMediaType === 'bollywood') ? 
+        [...filteredAndCategorizedItems.bollywoodMovies] : [],
       otherMovies: selectedMediaType === 'all' ? 
-        filteredAndCategorizedItems.otherMovies : []
+        [...filteredAndCategorizedItems.otherMovies] : [],
+      totalFilteredItems: filteredAndCategorizedItems.totalFilteredItems
     };
 
-    const categories = {
+    const categories: CategorizedItemsMap = {
       'Web Series': {
         items: [...filteredItems.series],
         icon: <Tv className="mr-2 h-5 w-5 text-primary/90" />,
         months: []
       },
       'Anime': {
-        items: selectedMediaType === 'anime' || selectedMediaType === 'all' || selectedMediaType === 'animation' ? 
+        items: (selectedMediaType === 'anime' || selectedMediaType === 'all' || selectedMediaType === 'animation') ? 
           [...filteredItems.animationMovies] : [],
         icon: <Brush className="mr-2 h-5 w-5 text-primary/90" />,
         months: []
@@ -297,8 +309,9 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
     
     // Remove empty categories
     Object.keys(categories).forEach(key => {
-      if (categories[key as keyof typeof categories].items.length === 0) {
-        delete categories[key as keyof typeof categories];
+      const categoryKey = key as keyof typeof categories;
+      if (categories[categoryKey]?.items.length === 0) {
+        delete categories[categoryKey];
       }
     });
 
@@ -307,8 +320,14 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
       const monthsMap = new Map();
       
       data.items.forEach(item => {
+        // Handle timezone properly by using UTC
         const date = item.addedAt ? new Date(item.addedAt) : new Date(0);
-        const monthYear = format(date, 'MMMM yyyy');
+        const utcDate = new Date(Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate()
+        ));
+        const monthYear = format(utcDate, 'MMMM yyyy');
         
         if (!monthsMap.has(monthYear)) {
           monthsMap.set(monthYear, []);
@@ -396,7 +415,7 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
   const originalTotalItemsInList = listDetails.items.length;
 
   return (
-    <main className="container mx-auto py-6 sm:py-8 px-4">
+    <div className="container mx-auto py-6 sm:py-8 px-4">
       <Button variant="outline" size="sm" onClick={() => router.push('/me')} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to My Lists
@@ -452,6 +471,17 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
             >
               <FilterIcon className="h-4 w-4" />
               <span>Filters{isAnyFilterActive ? ' •' : ''}</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                clearAllFilters();
+                setSelectedMediaType('all');
+              }}
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              Show All
             </Button>
           </div>
         </div>
@@ -563,27 +593,38 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
             
             return (
               <section key={category} className="relative">
-                <div className="flex items-center mb-4 sm:mb-6 pb-2 border-b border-border/70">
+                <div className="flex items-center justify-between mb-4 sm:mb-6 pb-2 border-b border-border/70">
                   <h2 className="flex items-center text-2xl sm:text-3xl font-semibold text-primary/90">
                     {icon}
                     {category}
                     <span className="text-lg text-muted-foreground ml-2">({items.length})</span>
                   </h2>
+                  {items.length > 8 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      onClick={() => router.push(`/me/list/${listId}/${category.toLowerCase().replace(/\s+/g, '-')}`)}
+                    >
+                      View All <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-
                 {months.map(({ month, items: monthItems }) => (
                   <div key={month} className="mb-8">
                     <h3 className="text-xl font-medium text-muted-foreground mb-4">{month}</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                      {monthItems.map((item: ListItem) => (
-                        <div key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`}>
-                          <ContentCard 
-                            item={item} 
-                            currentListId={listDetails.id} 
-                            onItemStatusChange={handleItemUpdate} 
-                          />
-                        </div>
-                      ))}
+                    <div className="relative">
+                      <div className="flex space-x-4 sm:space-x-6 pb-4 overflow-x-auto scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+                        {monthItems.map((item: ListItem) => (
+                          <div key={`${item.id}-${item.media_type}-${listDetails.id}-${item.addedAt || 0}`} className="flex-shrink-0 w-40 sm:w-48 md:w-56">
+                            <ContentCard 
+                              item={item} 
+                              currentListId={listDetails.id} 
+                              onItemStatusChange={handleItemUpdate} 
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -591,7 +632,7 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
             );
           })}
         </div>
-      ) : originalTotalItemsInList > 0 && filteredAndCategorizedItems.totalFilteredItems === 0 ? (
+      ) : originalTotalItemsInList > 0 ? (
         <div className="text-center py-10">
           <ListX className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <p className="text-xl text-muted-foreground">No items match your current filters.</p>
@@ -604,7 +645,7 @@ export default function IndividualListPage({ params: paramsFromProp }: Individua
           <p className="text-muted-foreground">Add some movies and shows to see them here!</p>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
