@@ -10,6 +10,8 @@ import { createList, type UserList } from '@/services/watchedItemsService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LogIn } from 'lucide-react';
+import axios from 'axios';
+import {saveListURL} from '../../constant/index'
 
 interface CreateListDialogProps {
   isOpen: boolean;
@@ -25,7 +27,7 @@ export function CreateListDialog({ isOpen, onClose, onListCreated }: CreateListD
   const router = useRouter();
   const { user } = useAuth();
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!user) {
       onClose();
       router.push('/login');
@@ -44,9 +46,45 @@ export function CreateListDialog({ isOpen, onClose, onListCreated }: CreateListD
     
     setError('');
     try {
-      // createList now returns the array of all lists, with the new one first.
-      const allLists = createList(listName.trim());
-      const createdList = allLists[0]; // The newly created list is at the beginning
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        toast({ 
+          title: "Error", 
+          description: "User ID not found. Please try logging in again.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      const newList: UserList = {
+        id: `list-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        name: listName.trim() || "Untitled List",
+        items: [],
+        createdAt: Date.now(),
+        isPinned: false,
+      };
+
+      // console.log("List", listName);
+      // const allLists = createList(listName.trim());
+      // const finalList = allLists
+
+      const URL = saveListURL(userId);
+      if (!URL) {
+        toast({ 
+          title: "Error", 
+          description: "Could not generate API URL. Please try again.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      // console.log("URL", URL, finalList);
+      
+      const response = await axios.post(URL, [newList]);
+      console.log("this is response", response);
+      
+
+      const createdList = response.data[0]; // The newly created list is at the beginning
 
       if (createdList) {
         toast({ title: "List Created!", description: `"${createdList.name}" has been created.` });
@@ -54,7 +92,6 @@ export function CreateListDialog({ isOpen, onClose, onListCreated }: CreateListD
         setListName(''); // Reset input
         onClose();
       } else {
-        // This case should ideally not happen if createList is implemented correctly
         throw new Error("Failed to retrieve the newly created list.");
       }
     } catch (e: any) {

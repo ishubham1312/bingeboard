@@ -57,10 +57,17 @@ export default function LoginPage() {
     setError(null);
     setIsLoading(true);
     try {
+      console.log("AUth -----> ", auth);
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        
+       const user = await createUserWithEmailAndPassword(auth, email, password);
+       const userId = user.user.uid;
+       localStorage.setItem('userId', userId);
+
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const user = await signInWithEmailAndPassword(auth, email, password);
+        const userId = user.user.uid;
+        localStorage.setItem('userId', userId);
       }
       handleAuthSuccess();
     } catch (err: any) {
@@ -75,6 +82,10 @@ export default function LoginPage() {
     setIsLoading(true);
     const { user, error: googleError } = await signInWithGoogle();
     if (user) {
+      console.log("effheofue", user?.uid);
+      const userId = user?.uid;
+      localStorage.setItem('userId', userId);
+      
       toast({ title: "Signed in with Google!", description: "Redirecting to homepage..." });
       router.push('/');
       router.refresh();
